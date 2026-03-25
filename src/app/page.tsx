@@ -1,101 +1,105 @@
-import Image from "next/image";
+"use client";
+
+import AuthGuard from "@/components/AuthGuard";
+import ClockButton from "@/components/ClockButton";
+import InstallPrompt from "@/components/InstallPrompt";
+import StatusBanner from "@/components/StatusBanner";
+import SummaryCard from "@/components/SummaryCard";
+import { useClockStatus } from "@/hooks/useClockStatus";
+import { useNotification } from "@/hooks/useNotification";
+import { signOut, useSession } from "next-auth/react";
+import Link from "next/link";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const { data: session } = useSession();
+  const { data, loading, error, clockIn, clockOut } = useClockStatus();
+  const { scheduleReminder, cancelReminder } = useNotification();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  const handleClockIn = async () => {
+    await clockIn();
+    // Schedule reminder after successful clock-in
+    if (data?.currentEntry?.clockIn) {
+      scheduleReminder(data.currentEntry.clockIn);
+    }
+  };
+
+  const handleClockOut = async () => {
+    cancelReminder();
+    await clockOut();
+  };
+
+  return (
+    <AuthGuard>
+      <div className="min-h-screen flex flex-col">
+        {/* Header */}
+        <header className="bg-white border-b border-gray-200 px-4 py-3">
+          <div className="max-w-lg mx-auto flex items-center justify-between">
+            <h1 className="text-lg font-bold text-gray-900">Time Tracker</h1>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/history"
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                History
+              </Link>
+              <button
+                onClick={() => signOut()}
+                className="text-sm text-gray-400 hover:text-gray-600"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Main */}
+        <main className="flex-1 flex flex-col items-center px-4 py-8 max-w-lg mx-auto w-full">
+          {error && (
+            <div className="w-full mb-4 p-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-xl text-sm">
+              {navigator.onLine
+                ? error
+                : "You're offline. Showing last known data."}
+            </div>
+          )}
+
+          {/* Status */}
+          <div className="w-full mb-8">
+            <StatusBanner
+              isClockedIn={data?.isClockedIn ?? false}
+              clockInTime={data?.currentEntry?.clockIn ?? null}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          </div>
+
+          {/* Clock Button */}
+          <div className="flex-1 flex items-center justify-center mb-8">
+            <ClockButton
+              isClockedIn={data?.isClockedIn ?? false}
+              clockInTime={data?.currentEntry?.clockIn ?? null}
+              loading={loading}
+              onClockIn={handleClockIn}
+              onClockOut={handleClockOut}
+            />
+          </div>
+
+          {/* Summary */}
+          <div className="w-full">
+            <SummaryCard
+              todayHours={data?.todayHours ?? 0}
+              weekHours={data?.weekHours ?? 0}
+              monthHours={data?.monthHours ?? 0}
+            />
+          </div>
+
+          {/* User info */}
+          {session?.user?.email && (
+            <p className="text-xs text-gray-400 mt-6">
+              Signed in as {session.user.email}
+            </p>
+          )}
+        </main>
+
+        <InstallPrompt />
+      </div>
+    </AuthGuard>
   );
 }
