@@ -161,28 +161,42 @@ export default function HistoryPage() {
                 Calculate Hours
               </h2>
               <div className="bg-white rounded-xl border border-gray-200 p-4">
-                <div className="flex gap-3 items-end">
-                  <div className="flex-1">
-                    <label className="block text-xs text-gray-500 mb-1">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">
                       From
                     </label>
-                    <input
-                      type="date"
-                      value={rangeFrom}
-                      onChange={(e) => setRangeFrom(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+                    <div className="relative">
+                      <input
+                        type="date"
+                        value={rangeFrom}
+                        onChange={(e) => setRangeFrom(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 bg-white appearance-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
+                      />
+                      {!rangeFrom && (
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">
+                          Start date
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <label className="block text-xs text-gray-500 mb-1">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">
                       To
                     </label>
-                    <input
-                      type="date"
-                      value={rangeTo}
-                      onChange={(e) => setRangeTo(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+                    <div className="relative">
+                      <input
+                        type="date"
+                        value={rangeTo}
+                        onChange={(e) => setRangeTo(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 bg-white appearance-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
+                      />
+                      {!rangeTo && (
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">
+                          End date
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 {rangeResult && (
