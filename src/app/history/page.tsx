@@ -17,6 +17,8 @@ export default function HistoryPage() {
   });
   const [loading, setLoading] = useState(true);
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
+  const [rangeFrom, setRangeFrom] = useState("");
+  const [rangeTo, setRangeTo] = useState("");
 
   // Compute monthly hours breakdown from entries
   const monthlyBreakdown = entries
@@ -35,6 +37,25 @@ export default function HistoryPage() {
 
   const monthlyList = Object.entries(monthlyBreakdown)
     .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime());
+
+  // Date range calculation
+  const rangeResult =
+    rangeFrom && rangeTo
+      ? (() => {
+          const filtered = entries.filter(
+            (e) =>
+              e.status !== "summary" &&
+              e.hours &&
+              e.date >= rangeFrom &&
+              e.date <= rangeTo
+          );
+          const totalHours = filtered.reduce(
+            (sum, e) => sum + (e.hours ?? 0),
+            0
+          );
+          return { totalHours, days: filtered.length };
+        })()
+      : null;
 
   const fetchEntries = useCallback(async () => {
     try {
@@ -133,6 +154,57 @@ export default function HistoryPage() {
               monthHours={summary.monthHours}
             />
           </div>
+
+          {!loading && (
+            <div className="mb-6">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                Calculate Hours
+              </h2>
+              <div className="bg-white rounded-xl border border-gray-200 p-4">
+                <div className="flex gap-3 items-end">
+                  <div className="flex-1">
+                    <label className="block text-xs text-gray-500 mb-1">
+                      From
+                    </label>
+                    <input
+                      type="date"
+                      value={rangeFrom}
+                      onChange={(e) => setRangeFrom(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-xs text-gray-500 mb-1">
+                      To
+                    </label>
+                    <input
+                      type="date"
+                      value={rangeTo}
+                      onChange={(e) => setRangeTo(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                {rangeResult && (
+                  <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+                    <span className="text-sm text-gray-500">
+                      {rangeResult.days} day{rangeResult.days !== 1 ? "s" : ""} worked
+                    </span>
+                    <span className="text-lg font-bold text-blue-600">
+                      {rangeResult.totalHours.toFixed(1)} hrs
+                    </span>
+                  </div>
+                )}
+                {rangeFrom && rangeTo && !rangeResult?.days && (
+                  <div className="mt-3 pt-3 border-t border-gray-100 text-center">
+                    <span className="text-sm text-gray-400">
+                      No entries in this range
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {!loading && monthlyList.length > 0 && (
             <div className="mb-6">
