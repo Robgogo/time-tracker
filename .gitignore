@@ -33,9 +33,10 @@ yarn-error.log*
 
 # PWA generated files
 public/sw.js
-public/workbox-*.js
 public/sw.js.map
+public/workbox-*.js
 public/workbox-*.js.map
+public/worker-*.js
 
 # typescript
 *.tsbuildinfo
