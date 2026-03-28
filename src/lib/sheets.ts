@@ -1,5 +1,5 @@
 import { google } from "googleapis";
-import { ALLOWED_EMAILS, SHEET_HEADERS, SHEET_NAME } from "./constants";
+import { SHEET_HEADERS, SHEET_NAME } from "./constants";
 import {
   calculateHours,
   formatDate,
