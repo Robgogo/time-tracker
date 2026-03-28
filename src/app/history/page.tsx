@@ -18,6 +18,24 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
 
+  // Compute monthly hours breakdown from entries
+  const monthlyBreakdown = entries
+    .filter((e) => e.status !== "summary" && e.hours && e.date)
+    .reduce<Record<string, number>>((acc, entry) => {
+      const d = new Date(entry.date);
+      if (isNaN(d.getTime())) return acc;
+      const key = d.toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+        timeZone: "Europe/Madrid",
+      });
+      acc[key] = (acc[key] || 0) + (entry.hours ?? 0);
+      return acc;
+    }, {});
+
+  const monthlyList = Object.entries(monthlyBreakdown)
+    .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime());
+
   const fetchEntries = useCallback(async () => {
     try {
       const res = await fetch("/api/entries");
@@ -115,6 +133,27 @@ export default function HistoryPage() {
               monthHours={summary.monthHours}
             />
           </div>
+
+          {!loading && monthlyList.length > 0 && (
+            <div className="mb-6">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                Monthly Hours
+              </h2>
+              <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+                {monthlyList.map(([month, hours]) => (
+                  <div
+                    key={month}
+                    className="flex items-center justify-between px-4 py-3"
+                  >
+                    <span className="text-gray-700 font-medium">{month}</span>
+                    <span className="text-gray-900 font-bold">
+                      {hours.toFixed(1)} hrs
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {loading ? (
             <div className="flex justify-center py-12">
