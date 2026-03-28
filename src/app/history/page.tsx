@@ -61,6 +61,23 @@ export default function HistoryPage() {
     await fetchEntries();
   };
 
+  const handleDelete = async (entry: TimeEntry) => {
+    const confirmed = window.confirm(
+      `Delete entry for ${entry.day}, ${entry.date}?\n${entry.clockIn}${entry.clockOut ? ` - ${entry.clockOut}` : ""}\n\nThis cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    const res = await fetch(`/api/entries?rowIndex=${entry.rowIndex}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error || "Failed to delete");
+      return;
+    }
+    await fetchEntries();
+  };
+
   return (
     <AuthGuard>
       <div className="min-h-screen flex flex-col">
@@ -107,6 +124,7 @@ export default function HistoryPage() {
             <EntryTable
               entries={entries}
               onEdit={(entry) => setEditingEntry(entry)}
+              onDelete={handleDelete}
             />
           )}
         </main>

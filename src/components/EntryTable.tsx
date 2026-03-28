@@ -5,9 +5,10 @@ import { TimeEntry } from "@/types";
 interface Props {
   entries: TimeEntry[];
   onEdit: (entry: TimeEntry) => void;
+  onDelete: (entry: TimeEntry) => void;
 }
 
-export default function EntryTable({ entries, onEdit }: Props) {
+export default function EntryTable({ entries, onEdit, onDelete }: Props) {
   if (entries.length === 0) {
     return (
       <div className="text-center py-12 text-gray-400">
@@ -34,7 +35,7 @@ export default function EntryTable({ entries, onEdit }: Props) {
             <th className="text-right py-2 px-2 text-gray-500 font-medium">
               Hours
             </th>
-            <th className="text-center py-2 px-1 text-gray-500 font-medium w-8">
+            <th className="text-center py-2 px-1 text-gray-500 font-medium w-16">
             </th>
           </tr>
         </thead>
@@ -84,11 +85,32 @@ export default function EntryTable({ entries, onEdit }: Props) {
                   {entry.hours?.toFixed(2) || "—"}
                 </td>
                 <td className="py-2.5 px-1 text-center">
-                  {entry.status !== "active" && (
+                  <div className="flex items-center justify-center gap-1">
+                    {entry.status !== "active" && (
+                      <button
+                        onClick={() => onEdit(entry)}
+                        className="text-blue-500 hover:text-blue-700 p-1"
+                        title="Edit entry"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                          />
+                        </svg>
+                      </button>
+                    )}
                     <button
-                      onClick={() => onEdit(entry)}
-                      className="text-blue-500 hover:text-blue-700 p-1"
-                      title="Edit entry"
+                      onClick={() => onDelete(entry)}
+                      className="text-red-400 hover:text-red-600 p-1"
+                      title="Delete entry"
                     >
                       <svg
                         className="w-4 h-4"
@@ -100,11 +122,11 @@ export default function EntryTable({ entries, onEdit }: Props) {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                         />
                       </svg>
                     </button>
-                  )}
+                  </div>
                 </td>
               </tr>
             );

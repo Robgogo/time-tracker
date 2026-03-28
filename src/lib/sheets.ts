@@ -349,6 +349,33 @@ export async function updateEntry(
   };
 }
 
+export async function deleteEntry(rowIndex: number): Promise<void> {
+  const sheets = getSheetsClient();
+  const spreadsheetId = getSheetId();
+
+  // Get the numeric sheet GID
+  const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
+  const sheetGid = spreadsheet.data.sheets?.[0]?.properties?.sheetId ?? 0;
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      requests: [
+        {
+          deleteDimension: {
+            range: {
+              sheetId: sheetGid,
+              dimension: "ROWS",
+              startIndex: rowIndex - 1, // 0-based
+              endIndex: rowIndex,
+            },
+          },
+        },
+      ],
+    },
+  });
+}
+
 // --- Summary Logic ---
 
 async function checkAndInsertSummaries(): Promise<void> {
