@@ -1,5 +1,5 @@
 import { google } from "googleapis";
-import { SHEET_HEADERS, SHEET_NAME } from "./constants";
+import { PUSH_SHEET_NAME, SHEET_HEADERS, SHEET_NAME } from "./constants";
 import {
   calculateHours,
   formatDate,
@@ -469,6 +469,140 @@ async function checkAndInsertSummaries(): Promise<void> {
       range: `'${SHEET_NAME}'!A:H`,
       valueInputOption: "RAW",
       requestBody: { values: rowsToAppend },
+    });
+  }
+}
+
+// --- Clock-out Reminders ---
+// Column I of an active row holds how many reminders have been sent for it.
+
+export async function getRemindersSent(rowIndex: number): Promise<number> {
+  const sheets = getSheetsClient();
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: getSheetId(),
+    range: `'${SHEET_NAME}'!I${rowIndex}`,
+  });
+  return parseInt(res.data.values?.[0]?.[0] || "0") || 0;
+}
+
+export async function setRemindersSent(
+  rowIndex: number,
+  count: number
+): Promise<void> {
+  const sheets = getSheetsClient();
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: getSheetId(),
+    range: `'${SHEET_NAME}'!I${rowIndex}`,
+    valueInputOption: "RAW",
+    requestBody: { values: [[count]] },
+  });
+}
+
+// --- Push Subscriptions ---
+// Stored in a separate tab: Endpoint | Subscription JSON | Email | Created
+
+export interface StoredSubscription {
+  endpoint: string;
+  subscription: PushSubscriptionJSON;
+  email: string;
+}
+
+async function ensurePushSheet(): Promise<void> {
+  const sheets = getSheetsClient();
+  const spreadsheetId = getSheetId();
+  const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
+  const exists = spreadsheet.data.sheets?.some(
+    (s) => s.properties?.title === PUSH_SHEET_NAME
+  );
+  if (exists) return;
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      requests: [{ addSheet: { properties: { title: PUSH_SHEET_NAME } } }],
+    },
+  });
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `'${PUSH_SHEET_NAME}'!A1:D1`,
+    valueInputOption: "RAW",
+    requestBody: {
+      values: [["Endpoint", "Subscription", "Email", "Created"]],
+    },
+  });
+}
+
+export async function getSubscriptions(): Promise<StoredSubscription[]> {
+  const sheets = getSheetsClient();
+  try {
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: getSheetId(),
+      range: `'${PUSH_SHEET_NAME}'!A2:C`,
+    });
+    return (res.data.values || [])
+      .filter((row) => row[0] && row[1])
+      .map(([endpoint, json, email]) => ({
+        endpoint,
+        subscription: JSON.parse(json),
+        email: email || "",
+      }));
+  } catch {
+    // Tab doesn't exist yet
+    return [];
+  }
+}
+
+export async function saveSubscription(
+  email: string,
+  subscription: PushSubscriptionJSON
+): Promise<void> {
+  if (!subscription.endpoint) throw new Error("Invalid subscription");
+  await ensurePushSheet();
+
+  const existing = await getSubscriptions();
+  if (existing.some((s) => s.endpoint === subscription.endpoint)) return;
+
+  const sheets = getSheetsClient();
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: getSheetId(),
+    range: `'${PUSH_SHEET_NAME}'!A:D`,
+    valueInputOption: "RAW",
+    requestBody: {
+      values: [
+        [
+          subscription.endpoint,
+          JSON.stringify(subscription),
+          email,
+          new Date().toISOString(),
+        ],
+      ],
+    },
+  });
+}
+
+export async function removeSubscriptions(endpoints: string[]): Promise<void> {
+  if (endpoints.length === 0) return;
+  const sheets = getSheetsClient();
+  const spreadsheetId = getSheetId();
+
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `'${PUSH_SHEET_NAME}'!A2:D`,
+  });
+  const remaining = (res.data.values || []).filter(
+    (row) => !endpoints.includes(row[0])
+  );
+
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId,
+    range: `'${PUSH_SHEET_NAME}'!A2:D`,
+  });
+  if (remaining.length > 0) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `'${PUSH_SHEET_NAME}'!A2:D${remaining.length + 1}`,
+      valueInputOption: "RAW",
+      requestBody: { values: remaining },
     });
   }
 }

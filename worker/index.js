@@ -1,16 +1,17 @@
-self.addEventListener("message", (event) => {
-  if (event.data?.type === "SCHEDULE_REMINDER") {
-    const delay = event.data.delay;
-    setTimeout(() => {
-      self.registration.showNotification("Time Tracker", {
-        body: "You've been clocked in for 4 hours!",
-        icon: "/icons/icon-192x192.png",
-        badge: "/icons/icon-192x192.png",
-        tag: "clock-reminder",
-      });
-    }, delay);
-  }
+self.addEventListener("push", (event) => {
+  const data = event.data?.json() ?? {};
+  event.waitUntil(
+    self.registration.showNotification(data.title || "Time Tracker", {
+      body: data.body || "Don't forget to clock out!",
+      icon: "/icons/icon-192x192.png",
+      badge: "/icons/icon-192x192.png",
+      tag: "clock-reminder",
+      renotify: true,
+    })
+  );
+});
 
+self.addEventListener("message", (event) => {
   if (event.data?.type === "CANCEL_REMINDER") {
     self.registration
       .getNotifications({ tag: "clock-reminder" })
