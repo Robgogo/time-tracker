@@ -1,4 +1,4 @@
-import { formatInTimeZone, toZonedTime } from "date-fns-tz";
+import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
 import { differenceInMinutes, getISOWeek, parse } from "date-fns";
 import { TIMEZONE } from "./constants";
 
@@ -50,4 +50,9 @@ export function getCurrentTimestamp(): {
     day: formatDay(now),
     time: formatTime(now),
   };
+}
+
+// Convert a sheet date ("yyyy-MM-dd") and time ("HH:mm") in Madrid time to a Date
+export function toInstant(date: string, time: string): Date {
+  return fromZonedTime(`${date}T${time}:00`, TIMEZONE);
 }

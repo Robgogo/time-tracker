@@ -18,4 +18,6 @@ export const SHEET_HEADERS = [
 
 export const SHEET_NAME = "Time Tracker";
 
-export const REMINDER_HOURS = 4;
+export const REMINDER_HOURS = 2;
+
+export const PUSH_SHEET_NAME = "Push Subscriptions";

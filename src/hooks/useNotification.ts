@@ -1,11 +1,42 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
-import { REMINDER_HOURS } from "@/lib/constants";
+import { useCallback, useEffect } from "react";
+
+// Reminders are sent by the server via Web Push (see /api/reminders),
+// so they arrive even when the app is closed.
+
+function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
+  const padding = "=".repeat((4 - (base64.length % 4)) % 4);
+  const raw = atob((base64 + padding).replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+}
+
+async function subscribeToPush(): Promise<void> {
+  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  if (!publicKey || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+    return;
+  }
+
+  const reg = await navigator.serviceWorker.ready;
+  const subscription =
+    (await reg.pushManager.getSubscription()) ??
+    (await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey),
+    }));
+
+  // Only tell the server about subscriptions it hasn't seen from this device
+  if (localStorage.getItem("pushEndpoint") === subscription.endpoint) return;
+
+  const res = await fetch("/api/push/subscribe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(subscription.toJSON()),
+  });
+  if (res.ok) localStorage.setItem("pushEndpoint", subscription.endpoint);
+}
 
 export function useNotification() {
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const requestPermission = useCallback(async () => {
     if (!("Notification" in window)) return false;
     if (Notification.permission === "granted") return true;
@@ -14,78 +45,31 @@ export function useNotification() {
     return result === "granted";
   }, []);
 
-  const scheduleReminder = useCallback(
-    async (clockInTime: string) => {
-      const granted = await requestPermission();
-      if (!granted) return;
-
-      // Calculate delay from clock-in time
-      const [hours, minutes] = clockInTime.split(":").map(Number);
-      const clockInDate = new Date();
-      clockInDate.setHours(hours, minutes, 0, 0);
-
-      const reminderTime =
-        clockInDate.getTime() + REMINDER_HOURS * 60 * 60 * 1000;
-      const delay = reminderTime - Date.now();
-
-      if (delay <= 0) {
-        // Already past reminder time, show immediately
-        showNotification();
-        return;
-      }
-
-      // Try service worker first
-      if ("serviceWorker" in navigator) {
-        const reg = await navigator.serviceWorker.ready;
-        reg.active?.postMessage({
-          type: "SCHEDULE_REMINDER",
-          delay,
-        });
-      }
-
-      // Also set a local timer as fallback
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(showNotification, delay);
-    },
-    [requestPermission]
-  );
-
-  const cancelReminder = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
+  // Call from a user gesture (e.g. the clock-in tap) so iOS allows the prompt
+  const enableReminders = useCallback(async () => {
+    try {
+      if (await requestPermission()) await subscribeToPush();
+    } catch (err) {
+      console.error("Push subscription failed:", err);
     }
+  }, [requestPermission]);
 
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.ready.then((reg) => {
-        reg.active?.postMessage({ type: "CANCEL_REMINDER" });
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
-
-  return { scheduleReminder, cancelReminder, requestPermission };
-}
-
-function showNotification() {
-  if ("serviceWorker" in navigator) {
+  // Clear any reminder still showing once the user clocks out
+  const clearReminders = useCallback(() => {
+    if (!("serviceWorker" in navigator)) return;
     navigator.serviceWorker.ready.then((reg) => {
-      reg.showNotification("Time Tracker", {
-        body: `You've been clocked in for ${REMINDER_HOURS} hours!`,
-        icon: "/icons/icon-192x192.png",
-        badge: "/icons/icon-192x192.png",
-        tag: "clock-reminder",
-      });
+      reg.active?.postMessage({ type: "CANCEL_REMINDER" });
     });
-  } else if ("Notification" in window) {
-    new Notification("Time Tracker", {
-      body: `You've been clocked in for ${REMINDER_HOURS} hours!`,
-      icon: "/icons/icon-192x192.png",
-    });
-  }
+  }, []);
+
+  // Keep the subscription registered if permission was granted earlier
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "granted") {
+      subscribeToPush().catch((err) =>
+        console.error("Push subscription failed:", err)
+      );
+    }
+  }, []);
+
+  return { enableReminders, clearReminders };
 }

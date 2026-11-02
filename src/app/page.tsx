@@ -13,18 +13,16 @@ import Link from "next/link";
 export default function Home() {
   const { data: session } = useSession();
   const { data, loading, error, clockIn, clockOut } = useClockStatus();
-  const { scheduleReminder, cancelReminder } = useNotification();
+  const { enableReminders, clearReminders } = useNotification();
 
   const handleClockIn = async () => {
+    // Ask for notification permission so clock-out reminders can be pushed
+    enableReminders();
     await clockIn();
-    // Schedule reminder after successful clock-in
-    if (data?.currentEntry?.clockIn) {
-      scheduleReminder(data.currentEntry.clockIn);
-    }
   };
 
   const handleClockOut = async () => {
-    cancelReminder();
+    clearReminders();
     await clockOut();
   };
 
