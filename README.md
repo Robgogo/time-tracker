@@ -13,7 +13,7 @@ Built for personal use — only authorized Google accounts can access the app.
 - **Date Range Calculator** — select a period and see total hours worked
 - **Monthly Breakdown** — hours worked per month at a glance
 - **Weekly & Monthly Summaries** — auto-inserted summary rows in the sheet
-- **4-Hour Reminder** — push notification if you forget to clock out
+- **Clock-out Reminders** — push notification every 2 hours while you're still clocked in
 - **Installable PWA** — add to home screen on iPhone/Android
 - **Offline Support** — cached app shell with last known data
 
@@ -33,7 +33,8 @@ PWA (Next.js on Vercel)
 ├── Google OAuth (NextAuth.js) — email allowlist
 ├── API Routes (serverless) — clock in/out, entries CRUD
 ├── Google Sheets API (service account) — data storage
-└── Service Worker — offline caching + notifications
+├── Web Push (cron-job.org → /api/reminders) — clock-out reminders
+└── Service Worker — offline caching + push notifications
 ```
 
 All times are recorded in the **Europe/Madrid** timezone.
