@@ -17,6 +17,8 @@
 │              DELETE      │
 │  /api/status  GET       │  ← Current clock status + summaries
 │  /api/sheet   POST      │  ← Initialize sheet headers
+│  /api/push/subscribe    │  ← Save a device's push subscription
+│  /api/reminders GET     │  ← Send clock-out reminders (cron)
 └────────┬────────────────┘
          │ Google Sheets API (service account)
 ┌────────▼────────────────┐
@@ -34,9 +36,11 @@
 
 3. **Timezone**: All times are recorded in **Europe/Madrid** regardless of where the server or client is located, using `date-fns-tz`.
 
-4. **PWA**: The app is installable on iPhone via "Add to Home Screen". A service worker caches the app shell for offline use and handles the 4-hour clock-out reminder notification.
+4. **PWA**: The app is installable on iPhone via "Add to Home Screen". A service worker caches the app shell for offline use and shows push notifications.
 
-5. **Deployment**: GitHub Actions deploys to Vercel on every push to `main`. PRs get preview deployments with a URL comment.
+5. **Clock-out reminders**: Tapping Clock In asks for notification permission and saves the device's push subscription to a "Push Subscriptions" tab in the sheet. Every 5 minutes, [cron-job.org](https://cron-job.org) calls `/api/reminders`, which sends a Web Push notification to every saved device for each 2 hours (`REMINDER_MINUTES`) since clock-in, until you clock out. Column I of the active row records how many reminders have been sent.
+
+6. **Deployment**: GitHub Actions deploys to Vercel on every push to `main`. PRs get preview deployments with a URL comment.
 
 ### Google Sheet structure
 
@@ -116,6 +120,10 @@ cp .env.example .env.local
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Service account email from JSON key |
 | `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | Private key from JSON key (keep the `\n` characters) |
 | `GOOGLE_SHEET_ID` | Sheet ID from step 2 |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Web Push public key — generate a pair with `npx web-push generate-vapid-keys`. Must **not** be marked Sensitive in Vercel, since it's read at build time |
+| `VAPID_PRIVATE_KEY` | Web Push private key from the same pair |
+| `VAPID_SUBJECT` | Contact for push services, e.g. `mailto:you@example.com` |
+| `CRON_SECRET` | Random secret that protects `/api/reminders` — generate with `openssl rand -hex 32` |
 
 ### 4. Local Development
 
@@ -138,6 +146,10 @@ vercel env add GOOGLE_CLIENTSECRET production
 vercel env add GOOGLE_SERVICE_ACCOUNT_EMAIL production
 vercel env add GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY production
 vercel env add GOOGLE_SHEET_ID production
+vercel env add NEXT_PUBLIC_VAPID_PUBLIC_KEY production
+vercel env add VAPID_PRIVATE_KEY production
+vercel env add VAPID_SUBJECT production
+vercel env add CRON_SECRET production
 ```
 
 #### GitHub Actions (automated deploys)
@@ -148,8 +160,18 @@ Add these GitHub repository secrets:
 | `VERCEL_TOKEN` | Create at https://vercel.com/account/tokens |
 | `VERCEL_ORG_ID` | From `.vercel/project.json` → `orgId` |
 | `VERCEL_PROJECT_ID` | From `.vercel/project.json` → `projectId` |
+| `CRON_SECRET` | Same value as in Vercel (used by the manual reminder workflow) |
+| `APP_URL` | Your app URL with no trailing slash (used by the manual reminder workflow) |
 
 Push to `main` and the GitHub Actions workflow handles the rest.
+
+#### Clock-out reminders (cron-job.org)
+1. Create a free account at https://cron-job.org
+2. Create a cron job for `https://your-domain.com/api/reminders`, running every 5 minutes
+3. Under **Advanced > Headers**, add `Authorization` with the value `Bearer <your CRON_SECRET>`
+4. Use **Test run** to check it. It should return a JSON status such as `{"status":"not clocked in"}`
+
+You can also trigger a check by hand from GitHub's Actions tab with the "Clock-out Reminders" workflow.
 
 #### Custom domain (optional)
 If using Cloudflare:
@@ -164,6 +186,7 @@ If using Cloudflare:
 2. Tap the **Share** button (square with arrow)
 3. Tap **Add to Home Screen**
 4. Tap **Add**
+5. Open the app from the Home Screen icon and tap **Clock In** once to allow notifications. iOS only allows push notifications for Home Screen apps (iOS 16.4+)
 
 ### 7. Update Allowed Emails
 

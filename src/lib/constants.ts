@@ -18,7 +18,6 @@ export const SHEET_HEADERS = [
 
 export const SHEET_NAME = "Time Tracker";
 
-// TEMP: 10 minutes for testing; set back to 120 (2 hours) afterwards
-export const REMINDER_MINUTES = 10;
+export const REMINDER_MINUTES = 120;
 
 export const PUSH_SHEET_NAME = "Push Subscriptions";

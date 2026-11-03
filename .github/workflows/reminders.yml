@@ -1,8 +1,8 @@
 name: Clock-out Reminders
 
+# Reminders are triggered every 5 minutes by cron-job.org. GitHub's own
+# schedule ran too irregularly, so this is kept only for manual checks.
 on:
-  schedule:
-    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 jobs:
